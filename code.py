@@ -1,5 +1,5 @@
 import sqlite3
-from os import path
+
 
 def ExecuteScriptOnDB(dbConnection, sqlFilename):
     """
@@ -18,57 +18,33 @@ def ExecuteScriptOnDB(dbConnection, sqlFilename):
     dbConnection.executescript(sql)
     dbConnection.commit()
 
-def AddTableRow(dbConnection, tableName, row):
+
+def GetColumnNames(dbConnection, tableName):
     """
-    Ajoute une ligne dans une table.
+    Retourne les noms des colonnes d'une table
 
     Paramètres:
         dbConnection (sqlite3.Connection object):
-            la connexion vers la base de données à modifier
+            la connexion vers la base de données
         tableName (str):
-            le nom de la table dans laquelle ajouter une ligne
-        row (list):
-            les données de la ligne à ajouter
-            
-    Valeur de retour:
-        None
-    """
-    for i in range(len(row)):
-        if type(row[i]) == str:
-            row[i] = "".join(["\"", row[i], "\""])
-    rowString = "".join(["(", ",".join(map(str, row)), ")"])
+            le nom de la table dont les noms de colonnes doivent être retournés
 
+    Valeur de retour (list):
+        une liste de chaînes de caractères, les noms des colonnes
+    """
+    oldRow_factory = dbConnection.row_factory
     # permet de récupérer des objets "Row" avec la méthode fetchone, ce sont des
     # sortes de dictionnaires qui contiennent les noms des colonnes
     dbConnection.row_factory = sqlite3.Row
     cursor = dbConnection.cursor()
     cursor.execute("SELECT * FROM " + tableName)
-    columnNames = "".join(["(", ",".join(cursor.fetchone().keys()), ")"])
-    print("INSERT INTO " + tableName + columnNames + " VALUES " + rowString)
-    cursor.execute("INSERT INTO " + tableName + columnNames + " VALUES " + rowString)
-
-    dbConnection.row_factory = None
-    dbConnection.commit()
+    columns = cursor.fetchone().keys()
+    dbConnection.row_factory = oldRow_factory
     cursor.close()
+    return columns
 
-def DeleteTableRow(dbConnection, tableName, idName, idValue):
-    """
-    Supprime une ligne dans une table
 
-    Paramètres:
-        dbConnection (sqlite3.Connection object):
-            la connexion vers la base de données à modifier
-        tableName (str):
-            le nom de la table dans laquelle modifier une ligne
-        idName (str):
-            le nom de la colonne contenant la clé primaire
-        idValue (str):
-            la valeur de la clé primaire de la ligne à supprimer
-    """
-    pass
-    #dbConnection.execute("DELETE FROM " + tableName + " WHERE 
-
-def GetTableContent(dbConnection, tableName):
+def GetContent(dbConnection, tableName):
     """
     Retourne le contenu d'une table
 
@@ -86,17 +62,154 @@ def GetTableContent(dbConnection, tableName):
         content.append(row)
     return content
 
-if __name__ == "__main__":
 
+def AddRow(dbConnection, tableName, row):
+    """
+    Ajoute une ligne dans une table.
+
+    Paramètres:
+        dbConnection (sqlite3.Connection object):
+            la connexion vers la base de données à modifier
+        tableName (str):
+            le nom de la table dans laquelle ajouter une ligne
+        row (list):
+            les données de la ligne à ajouter
+            
+    Valeur de retour:
+        None
+    """
+    # place des guillemets autour des données qui sont des chaînes de caractères
+    for i in range(len(row)):
+        if type(row[i]) == str:
+            row[i] = "".join(["\"", row[i], "\""])
+    # crée une chaîne de caractère de la forme "(donnée1, donnée2, ...)"
+    row = "".join(["(", ",".join(map(str, row)), ")"])
+
+    columnNames = GetColumnNames(dbConnection, tableName)
+    # on crée une chaîne de la forme "(colonne1, colonne2, ...)
+    columnNames = "".join(["(", ",".join(columnNames), ")"])
+    
+    sql = "INSERT INTO " + tableName + columnNames + " VALUES " + row
+    dbConnection.execute(sql)
+    dbConnection.commit()
+    print(sql)  # debuggage
+
+
+def DeleteRow(dbConnection, tableName, idName, idValue):
+    """
+    Supprime une ligne dans une table
+
+    Paramètres:
+        dbConnection (sqlite3.Connection object):
+            la connexion vers la base de données à modifier
+        tableName (str):
+            le nom de la table dans laquelle modifier une ligne
+        idName (str):
+            le nom de la colonne contenant la clé primaire
+        idValue (str):
+            la valeur de la clé primaire de la ligne à supprimer
+
+    Valeur de retour:
+        None
+    """
+    idName = "".join(["\"", idName, "\""])
+    idValue = "".join(["\"", str(idValue), "\""])
+    sql = "DELETE FROM " + tableName + " WHERE " + idName + " = " + idValue
+    dbConnection.execute(sql)
+    dbConnection.commit()
+    print(sql)  # debuggage
+
+
+def Update(dbConnection, tableName, newRecord, condition):
+    """
+    Modifie un enregistrement dans une base de données
+
+    Paramètres:
+        dbConnection (sqlite3.Connection object):
+            la connexion vers la base de données à modifier
+        tableName (str):
+            le nom de la table à modifier
+        values (dict):
+            les noms des colonnes auxquelles correspondent les valeurs
+            ex: Update(..., {"colonne1": value1, "colonne2": value2}, ...)
+        condition (str):
+            une condition SQL à appliquer pour sélectionner l'enregistrement à modifier
+
+    Valeur de retour:
+        None
+    """
+    setParameters = []
+    recordKeys = list(map(str, newRecord.keys()))
+    recordValues = list(map(str, newRecord.values()))
+    for i in range(len(recordKeys)):
+        if type(recordValues[i]) == str:
+            recordValues[i] = "".join(["\"", recordValues[i], "\""])
+        setParameters.append(recordKeys[i] + " = " + recordValues[i])
+    setParameters = ",".join(setParameters)
+    sql = "UPDATE " + tableName + " SET " + setParameters + " WHERE " + condition
+    print(sql)
+    dbConnection.execute(sql)
+    dbConnection.commit()
+    
+
+def SwitchToUser():
+    global tableau
+    global dbConnection
+    content = GetContent(dbConnection, "Utilisateur")
+
+    for widget in tableau.winfo_children():
+        widget.destroy()
+ 
+    for row in range(len(content)):
+        for column in range(len(content[row])):
+            tk.Label(tableau, text = content[row][column]).grid(row = row, column = column)
+
+
+def SwitchToAdmin():
+    global tableau
+    global dbConnection
+    content = GetContent(dbConnection, "Responsable")
+    
+    for widget in tableau.winfo_children():
+        widget.destroy()
+
+    for row in range(len(content)):
+        for column in range(len(content[row])):
+            tk.Label(tableau, text = content[row][column]).grid(row = row, column = column)
+
+
+if __name__ == "__main__":
+    import tkinter as tk
+
+    root = tk.Tk()
+    root.title("Gestionnaire de base de données")
+    root["bg"] = "bisque"
+
+    tableau = tk.Frame(root)
+    tableau.pack()
+    
     dbConnection = sqlite3.connect("db.db")
     ExecuteScriptOnDB(dbConnection, "creer_tables.sql")
 
     # décommenter pour peupler les tables
     #ExecuteScriptOnDB(dbConnection, "peupler_tables.sql")
 
-    #AddTableRow(dbConnection, "Serrure", ["192.168.0.209"])
-    #AddTableRow(dbConnection, "Utilisateur", [8, "reydet", "baptiste"])
-    print(GetTableContent(dbConnection, "Utilisateur"))
+    #AddRow(dbConnection, "Serrure", ["192.168.0.209"])
+    #AddRow(dbConnection, "Utilisateur", [4, "severini", "matteo"])
+
+    # prototype d'interface
+    menuButton = tk.Menubutton(root, text="Choisissez une table")
+    menuButton.menu = tk.Menu(menuButton)
+    menuButton["menu"] = menuButton.menu
+    userVar = tk.IntVar()
+    adminVar = tk.IntVar()
+    menuButton.menu.add_command(label="Utilisateur", command=SwitchToUser)
+    menuButton.menu.add_command(label="Responsable", command=SwitchToAdmin)
+    menuButton.pack()
+
+    #DeleteRow(dbConnection, "Utilisateur", "id", 4)
+    #Update(dbConnection, "Utilisateur", {"id": 4, "nom": "Reydet"}, "id = 8")
+    root.mainloop()
     dbConnection.close()
 
     
