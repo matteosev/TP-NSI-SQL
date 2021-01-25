@@ -20,42 +20,53 @@ def ExecuteScriptOnDB(dbConnection, sqlFilename):
 
 def AddTableRow(dbConnection, tableName, row):
     """
-    Ajoute un utilisateur dans la table "Utilisateur" de la base de données
+    Ajoute une ligne dans une table.
 
     Paramètres:
         dbConnection (sqlite3.Connection object):
-            la connexion vers la base de données dans laquelle ajouter un utilisateur
-        user (list):
-            une liste contenant
-            - l'id (int)
-            - le nom (str)
-            - le prénom (str)
-            de l'utilisateur à ajouter dans la base de données
+            la connexion vers la base de données à modifier
+        tableName (str):
+            le nom de la table dans laquelle ajouter une ligne
+        row (list):
+            les données de la ligne à ajouter
             
     Valeur de retour:
         None
     """
+    for i in range(len(row)):
+        if type(row[i]) == str:
+            row[i] = "".join(["\"", row[i], "\""])
+    rowString = "".join(["(", ",".join(map(str, row)), ")"])
+
     # permet de récupérer des objets "Row" avec la méthode fetchone, ce sont des
     # sortes de dictionnaires qui contiennent les noms des colonnes
     dbConnection.row_factory = sqlite3.Row
     cursor = dbConnection.cursor()
-    cursor.execute("SELECT * FROM Acces")
-    print(cursor.fetchone().keys())
+    cursor.execute("SELECT * FROM " + tableName)
+    columnNames = "".join(["(", ",".join(cursor.fetchone().keys()), ")"])
+    print("INSERT INTO " + tableName + columnNames + " VALUES " + rowString)
+    cursor.execute("INSERT INTO " + tableName + columnNames + " VALUES " + rowString)
+
     dbConnection.row_factory = None
     dbConnection.commit()
     cursor.close()
 
-def DeleteUser(dbConnection, ID):
+def DeleteTableRow(dbConnection, tableName, idName, idValue):
     """
-    Supprime un utilisateur dans la table "Utilisateur" de la base de données
+    Supprime une ligne dans une table
 
     Paramètres:
         dbConnection (sqlite3.Connection object):
-            la connexion vers la base de données dans laquelle supprimer un utilisateur
-        ID (int):
-            l'identifiant de l'utilisateur à supprimer
+            la connexion vers la base de données à modifier
+        tableName (str):
+            le nom de la table dans laquelle modifier une ligne
+        idName (str):
+            le nom de la colonne contenant la clé primaire
+        idValue (str):
+            la valeur de la clé primaire de la ligne à supprimer
     """
     pass
+    #dbConnection.execute("DELETE FROM " + tableName + " WHERE 
 
 def GetTableContent(dbConnection, tableName):
     """
@@ -81,9 +92,10 @@ if __name__ == "__main__":
     ExecuteScriptOnDB(dbConnection, "creer_tables.sql")
 
     # décommenter pour peupler les tables
-    #ExecuteScriptOnDB(dbFilename, "peupler_tables.sql")
+    #ExecuteScriptOnDB(dbConnection, "peupler_tables.sql")
 
-    AddTableRow(dbConnection, "Acces", None)
+    #AddTableRow(dbConnection, "Serrure", ["192.168.0.209"])
+    #AddTableRow(dbConnection, "Utilisateur", [8, "reydet", "baptiste"])
     print(GetTableContent(dbConnection, "Utilisateur"))
     dbConnection.close()
 
