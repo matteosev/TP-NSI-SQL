@@ -6,7 +6,7 @@ def ExecuteScriptOnDB(dbConnection, sqlFilename):
     Modifie une base de données en exécutant le code contenu dans un fichier SQL
 
     Paramètres:
-        dbConnection (sqlite3.Connection object):
+        dbConnection (sqlite3.Connection):
             la connexion vers la base de données sur laquelle exécuter le script
         sqlFilename (str):
             le nom du fichier contenant le code SQL à exécuter
@@ -24,7 +24,7 @@ def GetColumnNames(dbConnection, tableName):
     Retourne les noms des colonnes d'une table
 
     Paramètres:
-        dbConnection (sqlite3.Connection object):
+        dbConnection (sqlite3.Connection):
             la connexion vers la base de données
         tableName (str):
             le nom de la table dont les noms de colonnes doivent être retournés
@@ -49,7 +49,7 @@ def GetContent(dbConnection, tableName):
     Retourne le contenu d'une table
 
     Paramètres:
-        dbConnection (sqlite3.Connection object):
+        dbConnection (sqlite3.Connection):
             la connexion vers la base de données dans laquelle chercher la table
         tableName (str):
             le nom de la table dont le contenu doit être retourné
@@ -68,7 +68,7 @@ def AddRow(dbConnection, tableName, row):
     Ajoute une ligne dans une table.
 
     Paramètres:
-        dbConnection (sqlite3.Connection object):
+        dbConnection (sqlite3.Connection):
             la connexion vers la base de données à modifier
         tableName (str):
             le nom de la table dans laquelle ajouter une ligne
@@ -100,7 +100,7 @@ def DeleteRow(dbConnection, tableName, idName, idValue):
     Supprime une ligne dans une table
 
     Paramètres:
-        dbConnection (sqlite3.Connection object):
+        dbConnection (sqlite3.Connection):
             la connexion vers la base de données à modifier
         tableName (str):
             le nom de la table dans laquelle modifier une ligne
@@ -125,7 +125,7 @@ def Update(dbConnection, tableName, newRecord, condition):
     Modifie un enregistrement dans une base de données
 
     Paramètres:
-        dbConnection (sqlite3.Connection object):
+        dbConnection (sqlite3.Connection):
             la connexion vers la base de données à modifier
         tableName (str):
             le nom de la table à modifier
@@ -152,30 +152,30 @@ def Update(dbConnection, tableName, newRecord, condition):
     dbConnection.commit()
     
 
-def SwitchToUser():
-    global tableau
-    global dbConnection
-    content = GetContent(dbConnection, "Utilisateur")
+def PrintTable(frame, dbConnection, tableName):
+    """
+    Affiche une table dans une frame tkinter.
 
-    for widget in tableau.winfo_children():
+    Paramètres:
+        frame (tkinter.Frame):
+            la frame dans laquelle afficher la table
+        dbConnection (sqlite3.Connection):
+            la connexion vers la base de données contenant la table à afficher
+        tableName (str):
+            le nom de la table à afficher
+
+    Valeur de retour:
+        None
+    """
+    content = GetContent(dbConnection, tableName)
+
+    for widget in frame.winfo_children():
         widget.destroy()
- 
+
     for row in range(len(content)):
         for column in range(len(content[row])):
-            tk.Label(tableau, text = content[row][column]).grid(row = row, column = column)
+            tk.Label(frame, text = content[row][column]).grid(row = row, column = column)
 
-
-def SwitchToAdmin():
-    global tableau
-    global dbConnection
-    content = GetContent(dbConnection, "Responsable")
-    
-    for widget in tableau.winfo_children():
-        widget.destroy()
-
-    for row in range(len(content)):
-        for column in range(len(content[row])):
-            tk.Label(tableau, text = content[row][column]).grid(row = row, column = column)
 
 
 if __name__ == "__main__":
@@ -194,21 +194,16 @@ if __name__ == "__main__":
     # décommenter pour peupler les tables
     #ExecuteScriptOnDB(dbConnection, "peupler_tables.sql")
 
-    #AddRow(dbConnection, "Serrure", ["192.168.0.209"])
-    #AddRow(dbConnection, "Utilisateur", [4, "severini", "matteo"])
-
     # prototype d'interface
     menuButton = tk.Menubutton(root, text="Choisissez une table")
     menuButton.menu = tk.Menu(menuButton)
     menuButton["menu"] = menuButton.menu
     userVar = tk.IntVar()
     adminVar = tk.IntVar()
-    menuButton.menu.add_command(label="Utilisateur", command=SwitchToUser)
-    menuButton.menu.add_command(label="Responsable", command=SwitchToAdmin)
+    menuButton.menu.add_command(label="Utilisateur", command=lambda: PrintTable(tableau, dbConnection, "Utilisateur"))
+    menuButton.menu.add_command(label="Responsable", command=lambda: PrintTable(tableau, dbConnection, "Responsable"))
     menuButton.pack()
 
-    #DeleteRow(dbConnection, "Utilisateur", "id", 4)
-    #Update(dbConnection, "Utilisateur", {"id": 4, "nom": "Reydet"}, "id = 8")
     root.mainloop()
     dbConnection.close()
 
