@@ -1,4 +1,5 @@
 import sqlite3
+import tkinter as tk
 
 
 def ExecuteScriptOnDB(dbConnection, sqlFilename):
@@ -63,7 +64,7 @@ def GetContent(dbConnection, tableName):
     return content
 
 
-def AddRow(dbConnection, tableName, row):
+def AddRow(dbConnection, tableName, colNames, row):
     """
     Ajoute une ligne dans une table.
 
@@ -72,6 +73,8 @@ def AddRow(dbConnection, tableName, row):
             la connexion vers la base de données à modifier
         tableName (str):
             le nom de la table dans laquelle ajouter une ligne
+        colNames (list):
+            une liste contenant les noms des colonnes (str)
         row (list):
             les données de la ligne à ajouter
             
@@ -82,12 +85,12 @@ def AddRow(dbConnection, tableName, row):
     for i in range(len(row)):
         if type(row[i]) == str:
             row[i] = "".join(["\"", row[i], "\""])
-    # crée une chaîne de caractère de la forme "(donnée1, donnée2, ...)"
-    row = "".join(["(", ",".join(map(str, row)), ")"])
 
-    columnNames = GetColumnNames(dbConnection, tableName)
     # on crée une chaîne de la forme "(colonne1, colonne2, ...)
-    columnNames = "".join(["(", ",".join(columnNames), ")"])
+    colNames = "".join(["(", ",".join(colNames), ")"])
+
+    # crée une chaîne de la forme "(donnée1, donnée2, ...)"
+    row = "".join(["(", ",".join(map(str, row)), ")"])
     
     sql = "INSERT INTO " + tableName + columnNames + " VALUES " + row
     dbConnection.execute(sql)
@@ -167,26 +170,23 @@ def PrintTable(frame, dbConnection, tableName):
     Valeur de retour:
         None
     """
+    colNames = GetColumnNames(dbConnection, tableName)
     content = GetContent(dbConnection, tableName)
 
     for widget in frame.winfo_children():
         widget.destroy()
 
-    for row in range(len(content)):
-        for column in range(len(content[row])):
-            tk.Label(frame, text = content[row][column]).grid(row = row, column = column)
+    tk.Label(frame, text=tableName).grid(row = 0, column = 0, columnspan=len(colNames))
 
+    for col in range(len(colNames)):
+        tk.Label(frame, text = colNames[col]).grid(row = 1, column = col)
+
+    for row in range(len(content)):
+        for col in range(len(content[row])):
+            tk.Label(frame, text = content[row][col]).grid(row = row + 2, column = col)
 
 
 if __name__ == "__main__":
-    import tkinter as tk
-
-    root = tk.Tk()
-    root.title("Gestionnaire de base de données")
-    root["bg"] = "bisque"
-
-    tableau = tk.Frame(root)
-    tableau.pack()
     
     dbConnection = sqlite3.connect("db.db")
     ExecuteScriptOnDB(dbConnection, "creer_tables.sql")
@@ -195,14 +195,29 @@ if __name__ == "__main__":
     #ExecuteScriptOnDB(dbConnection, "peupler_tables.sql")
 
     # prototype d'interface
-    menuButton = tk.Menubutton(root, text="Choisissez une table")
+    root = tk.Tk()
+    root.title("Gestionnaire de base de données")
+    root.rowconfigure(0, weight=1)
+    root.columnconfigure(0, weight=2)
+    root.columnconfigure(1, weight=2)
+    root["bg"] = "bisque"
+
+    tableau = tk.Frame(root)
+    interface = tk.Frame(root)
+    tableau.grid(row=0, column=0)
+    interface.grid(row=0, column=1)
+    
+    menuButton = tk.Menubutton(interface, text="Choisissez une table")
     menuButton.menu = tk.Menu(menuButton)
     menuButton["menu"] = menuButton.menu
-    userVar = tk.IntVar()
-    adminVar = tk.IntVar()
-    menuButton.menu.add_command(label="Utilisateur", command=lambda: PrintTable(tableau, dbConnection, "Utilisateur"))
-    menuButton.menu.add_command(label="Responsable", command=lambda: PrintTable(tableau, dbConnection, "Responsable"))
-    menuButton.pack()
+    
+    tables = ("Acces", "Batiment", "Responsable", "Salle", "Serrure", "Situer", "Utilisateur")
+    choix = tk.StringVar()
+    choix.trace("w", lambda x, y, z: PrintTable(tableau, dbConnection, choix.get()))
+    choix.set("Utilisateur")
+    menu = tk.OptionMenu(interface, choix, *tables)
+    #addBtn = tk.Button(interface, text="Ajouter une ligne", command=AddRow(dbConnection, choix, "", ""))
+    menu.grid(row=0, column=0)
 
     root.mainloop()
     dbConnection.close()
