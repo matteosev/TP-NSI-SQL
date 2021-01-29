@@ -20,6 +20,26 @@ def ExecuteScriptOnDB(dbConnection, sqlFilename):
     dbConnection.commit()
 
 
+def GetTableNames(dbConnection):
+    """
+    Retourne les noms des tables d'une base de données
+
+    Paramètres:
+        dbConnection (sqlite3.Connection):
+            la connexion vers la base de données contenant la table à afficher
+
+    Valeur de retour (list):
+        Une liste contenant les noms des tables
+    """
+    cursor = dbConnection.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%';")
+    names = cursor.fetchall()
+    for i in range(len(names)):
+        names[i] = names[i][0]
+    cursor.close()
+    return names
+
+    
 def GetColumnNames(dbConnection, tableName):
     """
     Retourne les noms des colonnes d'une table
@@ -155,35 +175,30 @@ def Update(dbConnection, tableName, newRecord, condition):
     dbConnection.commit()
     
 
-def PrintTable(frame, dbConnection, tableName):
+def PrintTable(frame, colNames, content):
     """
     Affiche une table dans une frame tkinter.
 
     Paramètres:
         frame (tkinter.Frame):
             la frame dans laquelle afficher la table
-        dbConnection (sqlite3.Connection):
-            la connexion vers la base de données contenant la table à afficher
-        tableName (str):
-            le nom de la table à afficher
+        colNames (list):
+            une liste contenant les noms des colonnes
+        content (list):
+            une liste (lignes) de listes (colonnes) contenant les données de la table
 
     Valeur de retour:
         None
     """
-    colNames = GetColumnNames(dbConnection, tableName)
-    content = GetContent(dbConnection, tableName)
-
     for widget in frame.winfo_children():
         widget.destroy()
 
-    tk.Label(frame, text=tableName).grid(row = 0, column = 0, columnspan=len(colNames))
-
     for col in range(len(colNames)):
-        tk.Label(frame, text = colNames[col]).grid(row = 1, column = col)
+        tk.Label(frame, text = colNames[col]).grid(row = 0, column = col)
 
     for row in range(len(content)):
         for col in range(len(content[row])):
-            tk.Label(frame, text = content[row][col]).grid(row = row + 2, column = col)
+            tk.Label(frame, text = content[row][col]).grid(row = row + 1, column = col)
 
 
 if __name__ == "__main__":
@@ -213,7 +228,7 @@ if __name__ == "__main__":
     
     tables = ("Acces", "Batiment", "Responsable", "Salle", "Serrure", "Situer", "Utilisateur")
     choix = tk.StringVar()
-    choix.trace("w", lambda x, y, z: PrintTable(tableau, dbConnection, choix.get()))
+    choix.trace("w", lambda x, y, z: PrintTable(tableau, GetColumnNames(dbConnection, choix.get()), GetContent(dbConnection, choix.get())))
     choix.set("Utilisateur")
     menu = tk.OptionMenu(interface, choix, *tables)
     #addBtn = tk.Button(interface, text="Ajouter une ligne", command=AddRow(dbConnection, choix, "", ""))
