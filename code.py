@@ -118,9 +118,9 @@ def AddRow(dbConnection, tableName, colNames, row):
     print(sql)  # debuggage
 
 
-def DeleteRow(dbConnection, tableName, idName, idValue):
+def DeleteRowById(dbConnection, tableName, idName, idValue):
     """
-    Supprime une ligne dans une table
+    Supprime une ligne dans une table en fonction de son id
 
     Paramètres:
         dbConnection (sqlite3.Connection):
@@ -143,7 +143,7 @@ def DeleteRow(dbConnection, tableName, idName, idValue):
     print(sql)  # debuggage
 
 
-def Update(dbConnection, tableName, newRecord, condition):
+def Update(dbConnection, tableName, values, condition):
     """
     Modifie un enregistrement dans une base de données
 
@@ -152,9 +152,8 @@ def Update(dbConnection, tableName, newRecord, condition):
             la connexion vers la base de données à modifier
         tableName (str):
             le nom de la table à modifier
-        values (dict):
-            les noms des colonnes auxquelles correspondent les valeurs
-            ex: Update(..., {"colonne1": value1, "colonne2": value2}, ...)
+        values (tuple):
+            les valeurs de l'enregistrement dans l'ordre des colonnes
         condition (str):
             une condition SQL à appliquer pour sélectionner l'enregistrement à modifier
 
@@ -162,12 +161,11 @@ def Update(dbConnection, tableName, newRecord, condition):
         None
     """
     setParameters = []
-    recordKeys = list(map(str, newRecord.keys()))
-    recordValues = list(map(str, newRecord.values()))
-    for i in range(len(recordKeys)):
-        if type(recordValues[i]) == str:
-            recordValues[i] = "".join(["\"", recordValues[i], "\""])
-        setParameters.append(recordKeys[i] + " = " + recordValues[i])
+    colNames = GetColumnNames(dbConnection, tableName)
+    for i in range(len(colNames)):
+        if type(values[i]) == str:
+            values[i] = "".join(["\"", values[i], "\""])
+        setParameters.append(colNames[i] + " = " + values[i])
     setParameters = ",".join(setParameters)
     sql = "UPDATE " + tableName + " SET " + setParameters + " WHERE " + condition
     print(sql)
