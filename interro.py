@@ -69,13 +69,26 @@ class TkTable(tk.Frame):
                 # ajouter une ligne à la base de données
                 pass
             else:
-                dbHash = "".join(list(map(str, dbContent[i])))
-                selfHash = "".join(list(map(tk.StringVar.get, self.content[i])))
+                dbStrContent = list(map(str, dbContent[i]))
+                selfStrContent = list(map(tk.StringVar.get, self.content[i]))
+                
+                dbHash = "".join(dbStrContent)
+                selfHash = "".join(selfStrContent)
 
                 if dbHash != selfHash:
-                    pass
-                print(DeleteRowByValues(dbConnection, tableName, list(map(tk.StringVar.get, self.content[i]))))
+                    print(dbStrContent, selfStrContent)
+                    colNames = GetColumnNames(dbConnection, tableName)
+                    condition = createCondition(colNames, dbStrContent)
+                    Update(dbConnection, tableName, selfStrContent, condition)
+                #print(DeleteRowByValues(dbConnection, tableName, list(map(tk.StringVar.get, self.content[i]))))
 
+def createCondition(colNames, values):
+    sql = []
+    for i in range(len(colNames)):
+        if i > 0:
+            sql.append(" AND ")
+        sql.append(colNames[i] + " = " + values[i])
+    return "".join(sql)
 
 def DeleteRowByValues(dbConnection, tableName, values):
     """
@@ -93,12 +106,8 @@ def DeleteRowByValues(dbConnection, tableName, values):
         None
     """
     colNames = GetColumnNames(dbConnection, tableName)
-    sql = ["DELETE FROM " + tableName + " WHERE "]
-    for i in range(len(colNames)):
-        if i > 0:
-            sql.append(" AND ")
-        sql.append(colNames[i] + " = " + values[i])
-    sql = "".join(sql)
+    condition = createCondition(colNames, values)
+    sql = "".join(["DELETE FROM " + tableName + " WHERE " + condition])
     print(sql)
 
 
@@ -121,7 +130,21 @@ def UpdateTable(dbConnection, tableName, newContent):
     if GetContent(dbConnection, tableName) == newContent:
         print("=")
         return
-    
+ 
+def changeTable(dbConnection, tableName, tkTable):
+     global addParametersFrame
+
+     tkTable.print(dbConnection, choix.get())
+     
+     for widget in addParametersFrame.winfo_children():
+            widget.destroy()
+            
+     colNames = GetColumnNames(dbConnection, tableName)
+
+     for i in range(len(colNames)):
+         tk.Label(addParametersFrame, text=colNames[i]).grid(row=0, column=2*i)
+         tk.Entry(addParametersFrame).grid(row=0, column=2*i+1)
+         
 # TODO: faire un bouton "enregistrer" qui ne marche que quand un élément a été changé
 
 if __name__ == "__main__":
@@ -137,17 +160,32 @@ if __name__ == "__main__":
     
     interface = tk.Frame(root)
     interface.grid(row=0, column=1)
-
+    
     tables = GetTableNames(dbConnection)
     choix = tk.StringVar()
-    choix.trace("w", lambda x, y, z: tableau.print(dbConnection, choix.get()))
-    choix.set(tables[0])
+    choix.set("")
     
-    menu = tk.OptionMenu(interface, choix, *tables)
-    menu.grid(row=0, column=0)
- 
-    commitBtn = tk.Button(interface, text="Commit", command=lambda: tableau.saveToDB(dbConnection, choix.get()))
-    commitBtn.grid()
+    menuFrame = tk.Frame(interface)
+    menuFrame.grid(row=0)
+    menu = tk.OptionMenu(menuFrame, choix, *tables)
+    menu.grid()
+     
+    addFrame = tk.Frame(interface)
+    addFrame.grid(row=1, column=0)
+    searchBtn = tk.Button(addFrame, text="Chercher")
+    searchBtn.grid(row=0, column=0)
+    addBtn = tk.Button(addFrame, text="Ajouter")
+    addBtn.grid(row=0, column=1)
+    delBtn = tk.Button(addFrame, text="Supprimer")
+    delBtn.grid(row=0, column=2)
+    addParametersFrame = tk.Frame(addFrame)
+    addParametersFrame.grid(row=1, column=0)
+    
+    commitBtn = tk.Button(interface, text="Enregistrer", command=lambda:tableau.saveToDB(dbConnection, choix.get()))
+    commitBtn.grid(row=2, column=0)
+    
+    choix.trace("w", lambda x, y, z: changeTable(dbConnection, choix.get(), tableau))
+    choix.set(tables[0])
 
     root.mainloop()
     dbConnection.close()
