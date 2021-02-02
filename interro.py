@@ -18,9 +18,9 @@ class TkTable(tk.Frame):
                 le nom de la table à afficher
         """
         tk.Frame.__init__(self, parent)
-        self.print(dbConnection, tableName)
+        self.importTable(dbConnection, tableName)
 
-    def print(self, dbConnection, tableName):
+    def importTable(self, dbConnection, tableName):
 
         for widget in self.winfo_children():
             widget.destroy()
@@ -40,7 +40,18 @@ class TkTable(tk.Frame):
                 entry = tk.Entry(self, textvariable = self.content[row][col])
                 entry.grid(row = row + 1, column = col)
 
-                
+    def search(self, values):
+        result = []
+        for row in self.content:
+            row = list(map(tk.StringVar.get, row))
+            print(row, values)
+            for i in range(len(row)):
+                if row[i] == str(values[i]):
+                    result.append(row)
+
+        return result
+    
+    
     def saveToDB(self, dbConnection, tableName):
         """
         Enregistre le contenu de la TkTable dans une table
@@ -60,6 +71,7 @@ class TkTable(tk.Frame):
         selfLen = len(self.content)
 
         if selfLen < dbLen:
+            print("BDD plus grande que TkTable")
             for i in range(selfLen, dbLen):
                 # supprimer les lignes superflues
                 pass
@@ -67,7 +79,7 @@ class TkTable(tk.Frame):
         for i in range(selfLen):
             if i > dbLen:
                 # ajouter une ligne à la base de données
-                pass
+                print("BDD plus petite que TkTable")
             else:
                 dbStrContent = list(map(str, dbContent[i]))
                 selfStrContent = list(map(tk.StringVar.get, self.content[i]))
@@ -131,21 +143,22 @@ def UpdateTable(dbConnection, tableName, newContent):
         print("=")
         return
  
-def changeTable(dbConnection, tableName, tkTable):
-     global addParametersFrame
-
-     tkTable.print(dbConnection, choix.get())
-     
-     for widget in addParametersFrame.winfo_children():
-            widget.destroy()
-            
-     colNames = GetColumnNames(dbConnection, tableName)
-
-     for i in range(len(colNames)):
-         tk.Label(addParametersFrame, text=colNames[i]).grid(row=0, column=2*i)
-         tk.Entry(addParametersFrame).grid(row=0, column=2*i+1)
          
 # TODO: faire un bouton "enregistrer" qui ne marche que quand un élément a été changé
+
+def createWindow(tableName, btnText, command):
+    window = tk.Toplevel()
+    
+    colNames = GetColumnNames(dbConnection, tableName)
+
+    entryVars = [tk.StringVar() for n in range(len(colNames))]
+    
+    for i in range(len(colNames)):
+        tk.Label(window, text=colNames[i]).grid(row=0, column=i)
+        tk.Entry(window, textvariable=entryVars[i]).grid(row=1, column=i)
+
+    tk.Button(window, text=btnText, command=lambda: print(command(list(map(tk.StringVar.get, entryVars))))).grid(row=3, columnspan=len(colNames))
+
 
 if __name__ == "__main__":
     dbConnection = sqlite3.connect("db.db")
@@ -169,22 +182,21 @@ if __name__ == "__main__":
     menuFrame.grid(row=0)
     menu = tk.OptionMenu(menuFrame, choix, *tables)
     menu.grid()
-     
+    
     addFrame = tk.Frame(interface)
     addFrame.grid(row=1, column=0)
-    searchBtn = tk.Button(addFrame, text="Chercher")
+    searchBtn = tk.Button(addFrame, text="Chercher", command=lambda:createWindow(choix.get(), "Chercher", tableau.search))
     searchBtn.grid(row=0, column=0)
-    addBtn = tk.Button(addFrame, text="Ajouter")
+    # afficher les résultats dans une TkTable
+    addBtn = tk.Button(addFrame, text="Ajouter", command=lambda:createWindow(choix.get(), "Ajouter", None))
     addBtn.grid(row=0, column=1)
-    delBtn = tk.Button(addFrame, text="Supprimer")
+    delBtn = tk.Button(addFrame, text="Supprimer", command=lambda:createWindow(choix.get(), "Supprimer", None))
     delBtn.grid(row=0, column=2)
-    addParametersFrame = tk.Frame(addFrame)
-    addParametersFrame.grid(row=1, column=0)
     
     commitBtn = tk.Button(interface, text="Enregistrer", command=lambda:tableau.saveToDB(dbConnection, choix.get()))
     commitBtn.grid(row=2, column=0)
     
-    choix.trace("w", lambda x, y, z: changeTable(dbConnection, choix.get(), tableau))
+    choix.trace("w", lambda x, y, z: tableau.importTable(dbConnection, choix.get()))
     choix.set(tables[0])
 
     root.mainloop()
