@@ -99,6 +99,8 @@ def createCondition(colNames, values):
     for i in range(len(colNames)):
         if i > 0:
             sql.append(" AND ")
+        if type(values[i]) == str:
+            values[i] = "\"" + values[i] + "\""
         sql.append(colNames[i] + " = " + values[i])
     return "".join(sql)
 
@@ -146,7 +148,33 @@ def UpdateTable(dbConnection, tableName, newContent):
          
 # TODO: faire un bouton "enregistrer" qui ne marche que quand un élément a été changé
 
-def createWindow(tableName, btnText, command):
+def createSearchWindow(tableName, btnText, command):
+    window = tk.Toplevel()
+    
+    colNames = GetColumnNames(dbConnection, tableName)
+
+    entryVars = [tk.StringVar() for n in range(len(colNames))]
+    
+    for i in range(len(colNames)):
+        tk.Label(window, text=colNames[i]).grid(row=0, column=i)
+        tk.Entry(window, textvariable=entryVars[i]).grid(row=1, column=i)
+
+    tk.Button(window, text=btnText, command=lambda: print(command(list(map(tk.StringVar.get, entryVars))))).grid(row=3, columnspan=len(colNames))
+
+def createAddWindow(tableName, btnText, command):
+    window = tk.Toplevel()
+    
+    colNames = GetColumnNames(dbConnection, tableName)
+
+    entryVars = [tk.StringVar() for n in range(len(colNames))]
+    
+    for i in range(len(colNames)):
+        tk.Label(window, text=colNames[i]).grid(row=0, column=i)
+        tk.Entry(window, textvariable=entryVars[i]).grid(row=1, column=i)
+
+    tk.Button(window, text=btnText, command=lambda: print(command(list(map(tk.StringVar.get, entryVars))))).grid(row=3, columnspan=len(colNames))
+
+def createDeleteWindow(tableName, btnText, command):
     window = tk.Toplevel()
     
     colNames = GetColumnNames(dbConnection, tableName)
@@ -185,12 +213,11 @@ if __name__ == "__main__":
     
     addFrame = tk.Frame(interface)
     addFrame.grid(row=1, column=0)
-    searchBtn = tk.Button(addFrame, text="Chercher", command=lambda:createWindow(choix.get(), "Chercher", tableau.search))
+    searchBtn = tk.Button(addFrame, text="Chercher", command=lambda:createSearchWindow(choix.get(), "Chercher", tableau.search))
     searchBtn.grid(row=0, column=0)
-    # afficher les résultats dans une TkTable
-    addBtn = tk.Button(addFrame, text="Ajouter", command=lambda:createWindow(choix.get(), "Ajouter", None))
+    addBtn = tk.Button(addFrame, text="Ajouter", command=lambda:createAddWindow(choix.get(), "Ajouter", None))
     addBtn.grid(row=0, column=1)
-    delBtn = tk.Button(addFrame, text="Supprimer", command=lambda:createWindow(choix.get(), "Supprimer", None))
+    delBtn = tk.Button(addFrame, text="Supprimer", command=lambda:createDeleteWindow(choix.get(), "Supprimer", None))
     delBtn.grid(row=0, column=2)
     
     commitBtn = tk.Button(interface, text="Enregistrer", command=lambda:tableau.saveToDB(dbConnection, choix.get()))
