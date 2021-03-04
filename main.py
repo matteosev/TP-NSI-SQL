@@ -35,16 +35,11 @@ class app(tk.Tk):
         for tableName in tableNames:
             addMenu.add_command(label=tableName, command=None)
         
-        deleteMenu = tk.Menu(menuBar, tearoff=0)
-        for tableName in tableNames:
-            deleteMenu.add_command(label=tableName, command=None)
-        
         viewMenu = tk.Menu(menuBar, tearoff=0)
         for tableName in tableNames:
             viewMenu.add_command(label=tableName, command=lambda n=tableName: self.showTable(n))
         
         menuBar.add_cascade(label="Ajouter", menu=addMenu)
-        menuBar.add_cascade(label="Supprimer", menu=deleteMenu)
         menuBar.add_cascade(label="Consulter", menu=viewMenu)
         
         self.config(menu=menuBar)
@@ -54,8 +49,6 @@ class app(tk.Tk):
         fileName = askopenfilename(title="Importer une base de données", filetypes=[("Bases de données", ".db")])
         self.dbConn = sqlite3.connect(fileName)
         self.title(fileName)
-        #tkmsg.showinfo(title="Importer une base de données", message="Base de données importée")
-
 
     def saveDB(self):
         askopenfilename(title="Enregistrer dans une base de données")
@@ -63,9 +56,9 @@ class app(tk.Tk):
     def delFunction(self, tableName, nbLigne):
         content = GetContent(self.dbConn, tableName)
         deleteRowByValues(self.dbConn, tableName, content[nbLigne])
+        self.showTable(tableName)
         
     def click(self, tableName, ligne, column):
-        #print(content[0][0])
         Modification = tk.Tk()
         Modification.geometry('400x50')
         
@@ -76,11 +69,11 @@ class app(tk.Tk):
         for col, entry in enumerate(entryList):
             entry.insert(-1, content[ligne][col])
             entry.grid(row=0, column=col)
-        #self.wait_window()
-        
-        print(tableName)
-        delButton = tk.Button(Modification, text = 'Supprimer', command = lambda: [delFunction(tableName), Modification.destroy()])
-        delButton.grid(row=1)
+
+        saveButton = tk.Button(Modification, text="Enregistrer", command=None)
+        saveButton.grid(row=1, column=0)
+        delButton = tk.Button(Modification, text = 'Supprimer', command = lambda: [self.delFunction(tableName, ligne), Modification.destroy()])
+        delButton.grid(row=1, column=1)
 
     def showTable(self, tableName):
      
